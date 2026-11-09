@@ -1,0 +1,282 @@
+Project SportEventsDb {
+  database_type: 'SQL Server'
+}
+
+TableGroup Users_and_Dictionaries {
+  Roles
+  Users
+  Sports
+}
+TableGroup Venues_Group {
+  Venues
+  VenueSectors
+}
+TableGroup Competition {
+  Tournaments
+  Teams
+  Athletes
+  TeamMembers
+  Coaches
+  Referees
+  TournamentTeams
+}
+TableGroup Matches {
+  Events
+  EventReferees
+  EventResults
+}
+TableGroup Sales {
+  Orders
+  Tickets
+  Payments
+}
+TableGroup Sponsorship {
+  Sponsors
+  TournamentSponsors
+}
+TableGroup Audit {
+  AuditLog
+}
+
+Table Roles {
+  RoleId int [pk, increment]
+  Name nvarchar(50) [not null, unique]
+}
+
+Table Users {
+  UserId int [pk, increment]
+  RoleId int [not null, ref: > Roles.RoleId]
+  Email nvarchar(255) [not null]
+  PasswordHash nvarchar(255) [not null]
+  FullName nvarchar(150) [not null]
+  Phone nvarchar(20)
+  CreatedAt datetime2 [not null, default: `SYSUTCDATETIME()`]
+  UpdatedAt datetime2
+  UpdatedBy int [ref: > Users.UserId]
+  IsDeleted bit [not null, default: 0]
+  DeletedAt datetime2
+  indexes {
+    Email [unique, name: 'UX_Users_Email_Active']
+  }
+}
+
+Table Sports {
+  SportId int [pk, increment]
+  Name nvarchar(100) [not null, unique]
+  IsTeamSport bit [not null, default: 1]
+  Description nvarchar(500)
+}
+
+Table Venues {
+  VenueId int [pk, increment]
+  Name nvarchar(150) [not null]
+  City nvarchar(100) [not null]
+  Address nvarchar(255) [not null]
+  Capacity int [not null]
+  CreatedAt datetime2 [not null]
+  UpdatedAt datetime2
+  UpdatedBy int [ref: > Users.UserId]
+  IsDeleted bit [not null, default: 0]
+  DeletedAt datetime2
+}
+
+Table VenueSectors {
+  SectorId int [pk, increment]
+  VenueId int [not null, ref: > Venues.VenueId]
+  Name nvarchar(50) [not null]
+  RowsCount smallint [not null]
+  SeatsPerRow smallint [not null]
+  PriceMultiplier decimal(4,2) [not null, default: 1.00]
+  indexes {
+    (VenueId, Name) [unique]
+  }
+}
+
+Table Tournaments {
+  TournamentId int [pk, increment]
+  SportId int [not null, ref: > Sports.SportId]
+  Name nvarchar(150) [not null]
+  Season nvarchar(20) [not null]
+  StartDate date [not null]
+  EndDate date [not null]
+  Status nvarchar(20) [not null]
+  CreatedAt datetime2 [not null]
+  UpdatedAt datetime2
+  UpdatedBy int [ref: > Users.UserId]
+  IsDeleted bit [not null, default: 0]
+  DeletedAt datetime2
+}
+
+Table Teams {
+  TeamId int [pk, increment]
+  SportId int [not null, ref: > Sports.SportId]
+  Name nvarchar(150) [not null]
+  City nvarchar(100) [not null]
+  FoundedYear smallint
+  CreatedAt datetime2 [not null]
+  UpdatedAt datetime2
+  UpdatedBy int [ref: > Users.UserId]
+  IsDeleted bit [not null, default: 0]
+  DeletedAt datetime2
+  indexes {
+    (SportId, Name) [name: 'IX_Teams_Sport_Name']
+  }
+}
+
+Table Athletes {
+  AthleteId int [pk, increment]
+  FirstName nvarchar(100) [not null]
+  LastName nvarchar(100) [not null]
+  BirthDate date [not null]
+  Gender char(1) [not null]
+  Nationality nvarchar(60)
+  CreatedAt datetime2 [not null]
+  UpdatedAt datetime2
+  UpdatedBy int [ref: > Users.UserId]
+  IsDeleted bit [not null, default: 0]
+  DeletedAt datetime2
+}
+
+Table TeamMembers {
+  TeamMemberId int [pk, increment]
+  TeamId int [not null, ref: > Teams.TeamId]
+  AthleteId int [not null, ref: > Athletes.AthleteId]
+  JerseyNumber tinyint [not null]
+  Position nvarchar(50)
+  JoinedAt date [not null]
+  LeftAt date
+  indexes {
+    (TeamId, JerseyNumber) [unique, name: 'UX_TeamMembers_Jersey_Active']
+  }
+}
+
+Table Coaches {
+  CoachId int [pk, increment]
+  TeamId int [ref: > Teams.TeamId]
+  FirstName nvarchar(100) [not null]
+  LastName nvarchar(100) [not null]
+  LicenseNumber nvarchar(30) [not null, unique]
+  IsHeadCoach bit [not null, default: 0]
+}
+
+Table Referees {
+  RefereeId int [pk, increment]
+  SportId int [not null, ref: > Sports.SportId]
+  FirstName nvarchar(100) [not null]
+  LastName nvarchar(100) [not null]
+  Category nvarchar(30) [not null]
+}
+
+Table TournamentTeams {
+  TournamentId int [ref: > Tournaments.TournamentId]
+  TeamId int [ref: > Teams.TeamId]
+  GroupName nvarchar(10)
+  RegisteredAt datetime2 [not null]
+  indexes {
+    (TournamentId, TeamId) [pk]
+  }
+}
+
+Table Events {
+  EventId int [pk, increment]
+  TournamentId int [not null, ref: > Tournaments.TournamentId]
+  VenueId int [not null, ref: > Venues.VenueId]
+  HomeTeamId int [not null, ref: > Teams.TeamId]
+  AwayTeamId int [not null, ref: > Teams.TeamId]
+  StartTime datetime2 [not null]
+  Status nvarchar(20) [not null]
+  BaseTicketPrice decimal(10,2) [not null]
+  CreatedAt datetime2 [not null]
+  UpdatedAt datetime2
+  UpdatedBy int [ref: > Users.UserId]
+  IsDeleted bit [not null, default: 0]
+  DeletedAt datetime2
+  indexes {
+    (StartTime, Status) [name: 'IX_Events_StartTime_Covering']
+    (VenueId, StartTime)
+  }
+}
+
+Table EventReferees {
+  EventId int [ref: > Events.EventId]
+  RefereeId int [ref: > Referees.RefereeId]
+  Role nvarchar(30) [not null]
+  indexes {
+    (EventId, RefereeId) [pk]
+  }
+}
+
+Table EventResults {
+  EventId int [pk, ref: - Events.EventId]
+  HomeScore smallint [not null]
+  AwayScore smallint [not null]
+  WinnerTeamId int [ref: > Teams.TeamId]
+  Notes nvarchar(500)
+  UpdatedAt datetime2
+  UpdatedBy int [ref: > Users.UserId]
+}
+
+Table Orders {
+  OrderId int [pk, increment]
+  UserId int [not null, ref: > Users.UserId]
+  OrderDate datetime2 [not null]
+  TotalAmount decimal(12,2) [not null]
+  Status nvarchar(20) [not null]
+  UpdatedAt datetime2
+  UpdatedBy int [ref: > Users.UserId]
+  IsDeleted bit [not null, default: 0]
+  DeletedAt datetime2
+}
+
+Table Tickets {
+  TicketId int [pk, increment]
+  OrderId int [not null, ref: > Orders.OrderId]
+  EventId int [not null, ref: > Events.EventId]
+  SectorId int [not null, ref: > VenueSectors.SectorId]
+  RowNumber smallint [not null]
+  SeatNumber smallint [not null]
+  Price decimal(10,2) [not null]
+  Status nvarchar(20) [not null]
+  CreatedAt datetime2 [not null]
+  indexes {
+    (EventId, SectorId, RowNumber, SeatNumber) [unique, name: 'UX_Tickets_Seat_Active']
+  }
+}
+
+Table Payments {
+  PaymentId int [pk, increment]
+  OrderId int [not null, ref: > Orders.OrderId]
+  Amount decimal(12,2) [not null]
+  Method nvarchar(20) [not null]
+  Status nvarchar(20) [not null]
+  PaidAt datetime2 [not null]
+  TransactionRef nvarchar(100)
+}
+
+Table Sponsors {
+  SponsorId int [pk, increment]
+  Name nvarchar(150) [not null, unique]
+  Website nvarchar(255)
+  ContactEmail nvarchar(255)
+}
+
+Table TournamentSponsors {
+  TournamentId int [ref: > Tournaments.TournamentId]
+  SponsorId int [ref: > Sponsors.SponsorId]
+  Amount decimal(14,2) [not null]
+  Tier nvarchar(20) [not null]
+  indexes {
+    (TournamentId, SponsorId) [pk]
+  }
+}
+
+Table AuditLog {
+  AuditId bigint [pk, increment]
+  TableName nvarchar(128) [not null]
+  RecordId int [not null]
+  Action nvarchar(10) [not null]
+  ChangedBy int [ref: > Users.UserId]
+  ChangedAt datetime2 [not null]
+  OldData nvarchar(max)
+  NewData nvarchar(max)
+}
